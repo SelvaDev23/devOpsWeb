@@ -2,33 +2,33 @@ pipeline {
     agent any
     
     tools {
-        maven 'local_maven'
+        maven 'maven'
     }
-    parameters {
-         string(name: 'staging_server', defaultValue: '13.232.37.20', description: 'Remote Staging Server')
-    }
-
-stages{
-        stage('Build'){
-            steps {
+    stages{
+        stage('Build Maven'){
+            steps{
+                checkout([$class: 'GitSCM', branches: [[name: '*/master']], extensions: [], userRemoteConfigs: [[url: 'https://github.com/SelvaDev23/devOpsWeb.git']]])
                 sh 'mvn clean package'
             }
-            post {
-                success {
-                    echo 'Archiving the artifacts'
-                    archiveArtifacts artifacts: '**/target/*.war'
+        }
+        stage('Build docker image'){
+            steps{
+                script{
+                    sh 'docker build -t iamselva/My-Web-App .'
                 }
             }
         }
-
-        stage ('Deployments'){
-            parallel{
-                stage ("Deploy to Staging"){
-                    steps {
-                        sh "scp -v -o StrictHostKeyChecking=no **/*.war root@${params.staging_server}:/opt/tomcat/webapps/"
+        stage('Push image to hub'){
+            steps{
+                script{
+                    withCredentials([string(credentialsId: 'dockerhubpwd', variable: 'dockerhubpwd')]) {
+                     // some block
                     }
+                    sh 'docker login -u iamselva -p ${dockerhubpwd}'
+
+                    sh 'docker push iamselva/My-Web-App'
                 }
             }
-        }
+        }  
     }
-}
+}          
