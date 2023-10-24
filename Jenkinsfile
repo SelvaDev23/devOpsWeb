@@ -1,34 +1,34 @@
 pipeline {
     agent any
-    
-    tools {
+
+      tools {
         maven 'maven'
     }
-    stages{
-        stage('Build Maven'){
-            steps{
-                checkout([$class: 'GitSCM', branches: [[name: '*/master']], extensions: [], userRemoteConfigs: [[url: 'https://github.com/SelvaDev23/devOpsWeb.git']]])
+    stages {
+        stage('Build') {
+            steps {
+                checkout([$class: 'GitSCM', branches: [[name: '*/master']], extensions: [], userRemoteConfigs: [[url: 'https://github.com/SelvaDev23/my-web-app.git']]])
                 sh 'mvn clean package'
             }
         }
-        stage('Build docker image'){
-            steps{
-                script{
-                    sh 'docker build -t iamselva/My-Web-App .'
+        stage('Test') {
+            steps {
+                sh 'mvn test'
+            }
+            post{
+                success{
+                    echo "Archiving the Artifacts"
+                    archiveArtifacts artifacts: '**/target/*.war'
                 }
             }
         }
-        stage('Push image to hub'){
+        stage('Deploy to K8s'){
             steps{
                 script{
-                    withCredentials([string(credentialsId: 'dockerhubpwd', variable: 'dockerhubpwd')]) {
-                     // some block
-                    }
-                    sh 'docker login -u iamselva -p ${dockerhubpwd}'
-
-                    sh 'docker push iamselva/My-Web-App'
+                    deploy adapters: [tomcat9(path: '', url: 'http://13.234.213.88:8080/')], contextPath: null, onFailure: false, war: '***/*.war'
                 }
             }
-        }  
-    }
-}          
+        }
+    
+    }    
+}
